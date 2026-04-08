@@ -18,6 +18,10 @@ smk-dash watch --log .snakemake/log/$(ls -t .snakemake/log/ | head -1)
 smk-dash run -- snakemake --profile slurm -j 100 --use-envmodules
 ```
 
-<center><img src="./images/smk_dashboard_08april2026.png" alt="dash"/></center>
+<center><img src="./images/smk_dashboard_08april2026.png" alt="dash"/>
 
-<center><img src="./images/rule_breakdown.png" alt="rule-break"/></center>
+<br>
+
+<img src="./images/rule_breakdown.png" alt="rule-break" width="500"/>
+
+</center>
