@@ -20,4 +20,4 @@ smk-dash run -- snakemake --profile slurm -j 100 --use-envmodules
 
 <center><img src="./images/smk_dashboard_08april2026.png" alt="dash"/></center>
 
-
+<center><img src="./images/rule_breakdown.png" alt="rule-break"/></center>
