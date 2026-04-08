@@ -142,10 +142,10 @@ class RuleTablePanel(Static):
         for rule in sorted(state.rules.values(), key=lambda r: r.name):
             dt.add_row(
                 rule.name,
-                f"[green]{rule.done}[/]"  if rule.done    else "[dim]·[/]",
-                f"[yellow]{rule.running}[/]" if rule.running else "[dim]·[/]",
-                str(rule.pending)          if rule.pending else "[dim]·[/]",
-                f"[red]{rule.failed}[/]"  if rule.failed  else "[dim]·[/]",
+                f"[green]{rule.done}[/]"     if rule.done    else "[dim]·[/]",
+                f"[yellow]{rule.running}[/]"  if rule.running else "[dim]·[/]",
+                str(rule.pending)             if rule.pending else "[dim]·[/]",
+                f"[red]{rule.failed}[/]"      if rule.failed  else "[dim]·[/]",
             )
 
 
@@ -180,7 +180,6 @@ class SlurmJobsPanel(Static):
         dt = self.query_one("#slurm-dt", DataTable)
         dt.clear()
 
-        # Sort: running first, then by slurm_id descending
         order = {"RUNNING": 0, "COMPLETING": 1, "PENDING": 2}
         jobs = sorted(
             state.slurm_jobs.values(),
@@ -219,13 +218,6 @@ class ResourcePanel(Static):
         super().__init__(**kwargs)
         self.max_cpus = max_cpus
         self.max_mem_gb = max_mem_gb
-        self._notifier = FailureNotifier(
-            recipient=notify_email,
-            workflow_name=workflow_name,
-            log_path=log_path,
-            smtp_host=smtp_host,
-            smtp_port=smtp_port,
-        ) if notify_email else None
 
     def compose(self) -> ComposeResult:
         yield Label("◈ RESOURCES IN USE", classes="title")
@@ -314,9 +306,9 @@ class SmkDashApp(App):
     """
 
     BINDINGS = [
-        Binding("q",     "quit",         "Quit"),
-        Binding("r",     "force_refresh","Refresh"),
-        Binding("ctrl+l","clear_log",    "Clear log"),
+        Binding("q",      "quit",          "Quit"),
+        Binding("r",      "force_refresh", "Refresh"),
+        Binding("ctrl+l", "clear_log",     "Clear log"),
     ]
 
     TITLE = "smk-dash"
@@ -341,10 +333,11 @@ class SmkDashApp(App):
             workflow_name=workflow_name,
         )
         self.poll_interval = poll_interval
-        self.demo_mode = demo_mode
-        self.demo_speed = demo_speed
-        self.max_cpus = max_cpus
-        self.max_mem_gb = max_mem_gb
+        self.demo_mode     = demo_mode
+        self.demo_speed    = demo_speed
+        self.max_cpus      = max_cpus
+        self.max_mem_gb    = max_mem_gb
+
         self._notifier = FailureNotifier(
             recipient=notify_email,
             workflow_name=workflow_name,
@@ -399,10 +392,10 @@ class SmkDashApp(App):
     def _refresh_ui(self) -> None:
         s = self.state
 
-        self.query_one("#overview",    OverviewPanel).refresh_data(s)
-        self.query_one("#rule-table",  RuleTablePanel).refresh_data(s)
-        self.query_one("#slurm-jobs",  SlurmJobsPanel).refresh_data(s)
-        self.query_one("#resources",   ResourcePanel).refresh_data(s)
+        self.query_one("#overview",   OverviewPanel).refresh_data(s)
+        self.query_one("#rule-table", RuleTablePanel).refresh_data(s)
+        self.query_one("#slurm-jobs", SlurmJobsPanel).refresh_data(s)
+        self.query_one("#resources",  ResourcePanel).refresh_data(s)
 
         new_lines = s.drain_new_log_lines()
         if new_lines:
@@ -411,13 +404,12 @@ class SmkDashApp(App):
         # Fire failure email notifications
         if self._notifier:
             self._notifier.check_and_notify(s)
-            # Surface any delivery status messages into the log panel
             if self._notifier.delivery_log:
-                log_panel = self.query_one("#log-panel", LogPanel)
-                log_panel.push_lines(self._notifier.delivery_log)
+                self.query_one("#log-panel", LogPanel).push_lines(
+                    self._notifier.delivery_log
+                )
                 self._notifier.delivery_log.clear()
 
-        # Update subtitle with elapsed time
         self.sub_title = f"{s.workflow_name}  ⏱ {s.elapsed_str}"
 
     # ── actions ───────────────────────────────────────────────────────────────
