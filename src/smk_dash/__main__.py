@@ -40,23 +40,37 @@ def cli(ctx: click.Context) -> None:
 @click.option("--poll", default=5.0, show_default=True, help="Slurm poll interval (s).")
 @click.option("--max-cpus",   default=512,  show_default=True, help="Cluster CPU capacity for gauge.")
 @click.option("--max-mem-gb", default=2048, show_default=True, help="Cluster memory capacity (GB) for gauge.")
+@click.option("--notify", "-m", default=None, metavar="EMAIL",
+              help="Send an email when a rule fails (e.g. you@ox.ac.uk).")
+@click.option("--smtp-host", default="smtp.ox.ac.uk", show_default=True,
+              help="SMTP relay hostname.")
+@click.option("--smtp-port", default=25, show_default=True,
+              help="SMTP relay port.")
 def watch(
     log: str,
     name: Optional[str],
     poll: float,
     max_cpus: int,
     max_mem_gb: int,
+    notify: Optional[str],
+    smtp_host: str,
+    smtp_port: int,
 ) -> None:
     """Attach dashboard to an existing Snakemake log file."""
     from .app import SmkDashApp
 
     wf_name = name or Path(log).stem or "workflow"
+    if notify:
+        click.echo(f"Failure notifications → {notify}")
     app = SmkDashApp(
         log_path=log,
         workflow_name=wf_name,
         poll_interval=poll,
         max_cpus=max_cpus,
         max_mem_gb=max_mem_gb,
+        notify_email=notify,
+        smtp_host=smtp_host,
+        smtp_port=smtp_port,
     )
     app.run()
 
@@ -70,12 +84,19 @@ def watch(
 @click.option("--poll", default=5.0, show_default=True, help="Slurm poll interval (s).")
 @click.option("--max-cpus",   default=512,  show_default=True)
 @click.option("--max-mem-gb", default=2048, show_default=True)
+@click.option("--notify", "-m", default=None, metavar="EMAIL",
+              help="Send an email when a rule fails.")
+@click.option("--smtp-host", default="smtp.ox.ac.uk", show_default=True)
+@click.option("--smtp-port", default=25, show_default=True)
 @click.argument("snakemake_args", nargs=-1, type=click.UNPROCESSED)
 def run(
     name: Optional[str],
     poll: float,
     max_cpus: int,
     max_mem_gb: int,
+    notify: Optional[str],
+    smtp_host: str,
+    smtp_port: int,
     snakemake_args: tuple[str, ...],
 ) -> None:
     """
@@ -115,6 +136,9 @@ def run(
         poll_interval=poll,
         max_cpus=max_cpus,
         max_mem_gb=max_mem_gb,
+        notify_email=notify,
+        smtp_host=smtp_host,
+        smtp_port=smtp_port,
     )
     try:
         app.run()

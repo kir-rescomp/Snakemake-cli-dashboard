@@ -40,6 +40,7 @@ from textual import work
 from .models import WorkflowState
 from .watcher import LogWatcher
 from .slurm import SlurmPoller
+from .notifier import FailureNotifier
 
 # ── colour constants ──────────────────────────────────────────────────────────
 
@@ -218,6 +219,13 @@ class ResourcePanel(Static):
         super().__init__(**kwargs)
         self.max_cpus = max_cpus
         self.max_mem_gb = max_mem_gb
+        self._notifier = FailureNotifier(
+            recipient=notify_email,
+            workflow_name=workflow_name,
+            log_path=log_path,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+        ) if notify_email else None
 
     def compose(self) -> ComposeResult:
         yield Label("◈ RESOURCES IN USE", classes="title")
@@ -322,6 +330,9 @@ class SmkDashApp(App):
         demo_speed: float = 3.0,
         max_cpus: int = 512,
         max_mem_gb: int = 2048,
+        notify_email: Optional[str] = None,
+        smtp_host: str = "smtp.ox.ac.uk",
+        smtp_port: int = 25,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -334,6 +345,13 @@ class SmkDashApp(App):
         self.demo_speed = demo_speed
         self.max_cpus = max_cpus
         self.max_mem_gb = max_mem_gb
+        self._notifier = FailureNotifier(
+            recipient=notify_email,
+            workflow_name=workflow_name,
+            log_path=log_path,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+        ) if notify_email else None
 
     # ── layout ────────────────────────────────────────────────────────────────
 
@@ -389,6 +407,15 @@ class SmkDashApp(App):
         new_lines = s.drain_new_log_lines()
         if new_lines:
             self.query_one("#log-panel", LogPanel).push_lines(new_lines)
+
+        # Fire failure email notifications
+        if self._notifier:
+            self._notifier.check_and_notify(s)
+            # Surface any delivery status messages into the log panel
+            if self._notifier.delivery_log:
+                log_panel = self.query_one("#log-panel", LogPanel)
+                log_panel.push_lines(self._notifier.delivery_log)
+                self._notifier.delivery_log.clear()
 
         # Update subtitle with elapsed time
         self.sub_title = f"{s.workflow_name}  ⏱ {s.elapsed_str}"
